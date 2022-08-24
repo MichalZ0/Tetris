@@ -2,32 +2,37 @@
 #include <conio.h>
 #include <windows.h>
 #include <time.h>
+#include <math.h>
 
 unsigned char playfield[23][12];
 
 void border (unsigned char playfield[23][12]);
 void print (unsigned char playfield[23][12]);
 void fill (unsigned char playfield[23][12]);
-void createBlock (unsigned char playfield[23][12], int size1, int size2, int shape[4][2]);
+void createBlock (unsigned char playfield[23][12], int shape[4][2]);
 void movement (unsigned char playfield[23][12], int shape[4][2]);
 int keyhit();
 void gameplay(unsigned char playfield[23][12], int shape[4][2]);
-void blockPlacement(unsigned char playfield[23][12], int shape[4][2]);
+int blockPlacement(unsigned char playfield[23][12], int shape[4][2]);
+int copyArray(unsigned char playfield[23][12], int copiedShape[4][2], int shape[4][2]);
+int blocksInContact(int shape[4][2], int i, int CheckedY[4]);
 
 int main()
 {
-    
-    int lineShape[4][2] = {{0,1}, {0,2}, {0,3}, {0,4}}, // (y, x), where y is inversed; 
+
+    int lineShape[4][2] = {{0,1}, {0,2}, {0,3}, {0,4}}, // (y, x), where y is inversed;
         zShape[4][2] = {{0,1}, {0,2}, {1,2}, {1,3}},
-        lShape[4][2] = {{1,1}, {1,2}, {1,3}, {0,1}},
-        cubeShape[4][2] = {{1,1}, {1,2}, {0,1}, {0,2}},
-        tShape[4][2] = {{1,1}, {1,2}, {1,3}, {0,2}},
-        zInvShape[4][2] = {{1,1}, {1,2}, {0,2}, {0,3}},
-        lInvShape[4][2] = {{1,1}, {1,2}, {1,3}, {0,3}};
-    static int done = 0;  
-    
+        lShape[4][2] = {{0,1}, {1,1}, {1,2}, {1,3}},
+        cubeShape[4][2] = {{0,1}, {0,2}, {1,1}, {1,2}},
+        tShape[4][2] = {{0,2}, {1,1}, {1,2}, {1,3}},
+        zInvShape[4][2] = {{0,2}, {0,3}, {1,1}, {1,2}},
+        lInvShape[4][2] = {{0,3}, {1,1}, {1,2}, {1,3}};
+    static int done = 0;
+
+    int shape[4][2];
+
     // creating and setting up the playfield;
-    
+
         if (done == 0)
         {
              fill(playfield);
@@ -35,20 +40,34 @@ int main()
             done++;
 
         }
-       
-    
-    
+
+
+
     printf("\n");
 
     int *randomShape[7] = {lineShape, zShape, lShape, cubeShape, tShape, zInvShape, lInvShape};
     int number = rand()%7;
-    
-        createBlock(playfield, 4, 2, randomShape[number]);
-    
+
+
+        copyArray(playfield, randomShape[number], shape);
+        createBlock(playfield, shape);
+
         while (1)
         {
-           movement(playfield, randomShape[number]);
-           print(playfield);
+           printf("Przechodze tu");
+           if (blockPlacement(playfield, shape))
+           {
+                printf("TUTAJ 1\n");
+                movement(playfield, shape);
+                print(playfield);
+           }
+           else
+            {
+                printf("TUTAJ 2\n");
+                number = rand()%7;
+                copyArray(playfield, randomShape[number], shape);
+                createBlock(playfield, shape);
+            }
         }
 }
 
@@ -61,13 +80,13 @@ void border (unsigned char playfield[23][12])
             if (i < 22)
                 if (j == 0 || j == 11)
                 {
-                    playfield[i][j] = 179; 
+                    playfield[i][j] = 179;
                 }
             if (i == 22 && j > 0 && j <11)
                 playfield[i][j] = 196;
-                   
+
         }
-    } 
+    }
     playfield[22][0] = 192;
     playfield[22][11] = 217;
 }
@@ -84,10 +103,10 @@ void print(unsigned char playfield[23][12])
                  {
                     printf("%c", playfield[i][j]);
                     printf("%c", 196);
-                 }   
-                    
+                 }
+
             }
-            if (i < 22)    
+            if (i < 22)
                 printf("\n");
     }
     printf("%c", playfield[22][11]);
@@ -97,70 +116,163 @@ void fill (unsigned char playfield[23][12])
 {
     for (int i = 0; i < 23; i++)
         for (int j = 0; j < 12; j++)
-            playfield[i][j] = ' '; 
+            playfield[i][j] = ' ';
 }
 
-void createBlock (unsigned char playfield[23][12], int size1, int size2, int shape[4][2])
+void createBlock (unsigned char playfield[23][12], int shape[4][2])
 {
-    for (int i = 0; i < size1; i++)  
+    for (int i = 0; i < 4; i++)
         playfield[shape[i][0]][shape[i][1]] = 254;
 }
 
 int keyhit()
 {
-    time_t start = time(NULL); 
+    time_t start = time(NULL);
     while (time(NULL) - start < 1)
     {
        if (kbhit())
             return getch();
     }
-    return -1; 
-    
+    return -1;
+
 }
 
 void movement (unsigned char playfield[23][12], int shape[4][2])
 {
-    
-    char key = keyhit(); 
-    
+    char key = keyhit();
+
+    int oldShapeY[4], oldShapeX[4];
 
     if (key == -1 || key == 'o')
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 3; i >= 0; i--)
         {
-            shape[i][0]++; 
-            //printf("%d %d\t%c", shape[i][0], shape[i][1], playfield[shape[i][0]][shape[i][1]]);
-            
-            if (playfield[shape[i][0]][shape[i][1]] == 196 || playfield[shape[i][0]][shape[i][1]] == 254)
-                 main();
-            
-            playfield[shape[i][0]][shape[i][1]] = 254;
-            playfield[shape[i][0]-1][shape[i][1]] = ' '; 
-        }       
-    }   
+                oldShapeY[i] = shape[i][0];
+                oldShapeX[i] = shape[i][1];
+                shape[i][0]++;
+        }
+    }
     if (key == 'a')
     {
         for (int i = 0; i < 4; i++)
         {
+            oldShapeX[i] = shape[i][1];
+            oldShapeY[i] = shape[i][0];
             shape[i][1]--;
-            playfield[shape[i][0]][shape[i][1]] = 254; 
-            playfield[shape[i][0]][shape[i][1]+1] = ' '; 
         }
     }
     if (key == 'e')
     {
         for (int i = 3; i >= 0; i--)
         {
+            oldShapeX[i] = shape[i][1];
+            oldShapeY[i] = shape[i][0];
+
             shape[i][1]++;
-            playfield[shape[i][0]][shape[i][1]] = 254; 
-            playfield[shape[i][0]][shape[i][1]-1] = ' '; 
+
         }
     }
 
+    if (key == ',')
+    {
+        int pivot[2];
+        pivot[0] = shape[2][0];
+        pivot[1] = shape[2][1];
+
+        for (int i = 3; i >= 0; i--)
+        {
+            float xnew = cos(1.57079633) * (shape[i][1]-pivot[1]) - sin(1.57079633) * (shape[i][0] - pivot[0]) + pivot[1];
+            float ynew = sin(1.57079633) * (shape[i][1]-pivot[1]) + cos(1.57079633) * (shape[i][0] - pivot[0]) + pivot[0];
+
+            oldShapeX[i] = shape[i][1];
+            oldShapeY[i] = shape[i][0];
+
+            shape[i][0] = ynew;
+            shape[i][1] = xnew;
+
+        }
+
+        
+    }
+
+
+            for (int i = 0; i < 4; i++)
+            {
+                playfield[oldShapeY[i]][oldShapeX[i]] = ' ';
+            }
+
+
+            for (int i = 0; i < 4; i++)
+                playfield[shape[i][0]][shape[i][1]] = 254;
 }
 
-void blockPlacement(unsigned char playfield[23][12], int shape[4][2])
+int blockPlacement(unsigned char playfield[23][12], int shape[4][2])
 {
-    if (playfield[shape[0][0]+1][shape[0][1]] == 196)
-        printf("TEST");
+    int exit = 1, j = 3, numbersOfShapesInContact[4] = {-1, -1, -1, -1};
+    for (int i = 3; i >= 0; i--)
+    {   
+        int x = blocksInContact(shape, i, numbersOfShapesInContact);
+        printf("i = %d\t", i);
+        printf("x = %d\n", x);
+            printf("Test warunkow\n");
+            
+            if (x != -1)
+            {
+                    if ((shape[x][0])+1 == 22)
+                    {
+                        exit--;
+                        printf("Warunek 1\n");
+                    }
+
+                if (playfield[shape[x][0]+1][shape[x][1]] == 254)
+                {
+                    exit--;
+                    printf("Warunek 2\n");
+                }
+            }
+            
+        
+        //printf("x = %d\ty = %d ", shape[i][1], shape[i][0]);
+        //printf("%d ", x);
+    }
+    // printf("Test 4\n");
+    printf("Exit = %d\n", exit);
+
+    if (exit == 1)
+        return 1;
+    if (exit < 1)
+         return 0;
+}
+
+int copyArray(unsigned char playfield[23][12], int copiedShape[4][2], int shape[4][2])
+{
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 2; j++)
+            shape[i][j] = copiedShape[i][j];
+}
+
+int blocksInContact(int shape[4][2], int i, int CheckedY[4])
+{
+
+    int LowestY = i;
+
+    for (int k = 3; k >= 0; k--)
+    {
+        if (i == CheckedY[k])
+            return -1;
+    }
+
+    for (int j = i-1; j >= 0; j--)
+    {
+        if (shape[i][1] == shape[j][1])
+        {
+            if (shape[LowestY][0] < shape[j][0])
+            {
+                 LowestY = j;
+            }  
+            CheckedY[j+1] = j;
+            
+        }
+    }    
+    return LowestY;  
 }
