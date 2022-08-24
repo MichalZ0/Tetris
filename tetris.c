@@ -16,6 +16,7 @@ void gameplay(unsigned char playfield[23][12], int shape[4][2]);
 int blockPlacement(unsigned char playfield[23][12], int shape[4][2]);
 int copyArray(unsigned char playfield[23][12], int copiedShape[4][2], int shape[4][2]);
 int blocksInContact(int shape[4][2], int i, int CheckedY[4]);
+int blocksCleared(unsigned char playfield[23][12], int shape[4][2]); 
 
 int main()
 {
@@ -63,7 +64,7 @@ int main()
            }
            else
             {
-                printf("TUTAJ 2\n");
+                blocksCleared(playfield, shape); 
                 number = rand()%7;
                 copyArray(playfield, randomShape[number], shape);
                 createBlock(playfield, shape);
@@ -275,4 +276,42 @@ int blocksInContact(int shape[4][2], int i, int CheckedY[4])
         }
     }    
     return LowestY;  
+}
+
+int blocksCleared(unsigned char playfield[23][12], int shape[4][2])
+{
+    int ClearedBlocks[4] = {-1, -1, -1, -1}; 
+    for (int i = 0; i < 4; i++)
+    {
+        int blocksInY=0;
+        for (int j = 1; j < 11; j++)
+        {
+            if (playfield[shape[i][0]][j] == 254)
+                blocksInY++; 
+        }
+        if (blocksInY == 10)
+            ClearedBlocks[i] = shape[i][0];
+
+        for (int j = 1; j <= 10; j++)
+        {
+            if (ClearedBlocks[i] != -1)
+            {
+                playfield[ClearedBlocks[i]][j] = ' ';
+            }
+        }
+
+        for (int j = ClearedBlocks[i]; j > 0; j--)
+        {
+            if (j != -1)
+                for (int g = 1; g < 11; g++)
+                    playfield[j+1][g] = playfield[j][g];
+        }
+
+        printf("Blocks in Y: %d", blocksInY);
+    }
+    
+    for (int i = 0; i < 4; i++)
+    {
+        printf("Cleared Blocks: %d\t", ClearedBlocks[i]);
+    }
 }
