@@ -11,12 +11,13 @@ void print (unsigned char playfield[23][12]);
 void fill (unsigned char playfield[23][12]);
 void createBlock (unsigned char playfield[23][12], int shape[4][2]);
 void movement (unsigned char playfield[23][12], int shape[4][2]);
-int keyhit();
+int keyhit(char rejectKey);
 void gameplay(unsigned char playfield[23][12], int shape[4][2]);
 int blockPlacement(unsigned char playfield[23][12], int shape[4][2]);
 int copyArray(unsigned char playfield[23][12], int copiedShape[4][2], int shape[4][2]);
 int blocksInContact(int shape[4][2], int i, int CheckedY[4]);
 int blocksCleared(unsigned char playfield[23][12], int shape[4][2]); 
+
 
 int main()
 {
@@ -47,10 +48,11 @@ int main()
     printf("\n");
 
     int *randomShape[7] = {lineShape, zShape, lShape, cubeShape, tShape, zInvShape, lInvShape};
+    srand(time(NULL));
     int number = rand()%7;
 
 
-        copyArray(playfield, randomShape[number], shape);
+        copyArray(playfield, lineShape, shape);
         createBlock(playfield, shape);
 
         while (1)
@@ -66,7 +68,7 @@ int main()
             {
                 blocksCleared(playfield, shape); 
                 number = rand()%7;
-                copyArray(playfield, randomShape[number], shape);
+                copyArray(playfield, lineShape, shape);
                 createBlock(playfield, shape);
             }
         }
@@ -126,12 +128,13 @@ void createBlock (unsigned char playfield[23][12], int shape[4][2])
         playfield[shape[i][0]][shape[i][1]] = 254;
 }
 
-int keyhit()
+int keyhit(char rejectKey)
 {
     time_t start = time(NULL);
+    char key;
     while (time(NULL) - start < 1)
     {
-       if (kbhit())
+       if (key = kbhit() && key != rejectKey)
             return getch();
     }
     return -1;
@@ -140,9 +143,39 @@ int keyhit()
 
 void movement (unsigned char playfield[23][12], int shape[4][2])
 {
-    char key = keyhit();
+    static char rejectKey = 'o'; 
+    char key = keyhit(rejectKey);
+    int GoToY;
 
-    int oldShapeY[4], oldShapeX[4];
+    
+    int a=0, b=0; 
+
+    int oldShapeY[4], oldShapeX[4], leftMost[4] = {-1, -1, -1, -1}, rightMost[4] = {-1, -1, -1, -1}, leftX = shape[0][1], rightX = shape[0][1];
+    
+    for (int i = 1; i < 4; i++)
+    {
+          if (rightX < shape[i][1])
+            rightX = shape[i][1];
+
+            if (leftX > shape[i][1])  
+                leftX = shape[i][1];    
+    }
+
+   for (int i = 0; i < 4; i++)
+   {
+        if (rightX == shape[i][1])
+            rightMost[i] = shape[i][0];
+
+        if (leftX == shape[i][1])
+            leftMost[i] = shape[i][0];
+   }
+
+    for (int i = 0; i< 4; i++)
+    {
+        printf("LeftX : %d, RightX : %d\n", leftX, rightX);
+        printf("Left Most: %d\tRight Most: %d\n\n", leftMost[i], rightMost[i]);
+    }
+
 
     if (key == -1 || key == 'o')
     {
@@ -150,6 +183,9 @@ void movement (unsigned char playfield[23][12], int shape[4][2])
         {
                 oldShapeY[i] = shape[i][0];
                 oldShapeX[i] = shape[i][1];
+
+                
+
                 shape[i][0]++;
         }
     }
@@ -157,18 +193,37 @@ void movement (unsigned char playfield[23][12], int shape[4][2])
     {
         for (int i = 0; i < 4; i++)
         {
+                   
             oldShapeX[i] = shape[i][1];
             oldShapeY[i] = shape[i][0];
+
+            if (playfield[leftMost[i]][leftX-1] == 254 || playfield[leftMost[i]][leftX-1] == 179)
+            {
+                rejectKey = 'a'; 
+                a = 1;
+            }    
+                 
+
             shape[i][1]--;
+            
+            
         }
     }
     if (key == 'e')
     {
         for (int i = 3; i >= 0; i--)
         {
+        
             oldShapeX[i] = shape[i][1];
             oldShapeY[i] = shape[i][0];
 
+            if (playfield[rightMost[i]][rightX+1] == 254 || playfield[rightMost[i]][rightX+1] == 179)
+             {
+               rejectKey = 'e'; 
+               b = 1;
+             }  
+                
+    
             shape[i][1]++;
 
         }
@@ -192,10 +247,87 @@ void movement (unsigned char playfield[23][12], int shape[4][2])
             shape[i][1] = xnew;
 
         }
-
-        
     }
 
+    
+    if (key == ' ')
+    {
+        int lowestY[4]= {-1, -1, -1, -1}, highestY, distance, highestBlock = 3; 
+        for (int j = 3; j >= 0; j--)
+        {
+            oldShapeX[j] = shape[j][1];
+            oldShapeY[j] = shape[j][0];
+            
+            int y = blocksInContact(shape, j, lowestY); 
+            
+            
+
+            if (y != -1)
+            {
+                
+                
+                if (j == 3)
+                {
+                    
+                    while (playfield[shape[y][0]+1][shape[y][1]] != 254 && shape[y][0] < 21)
+                        shape[y][0]++; 
+                    highestY = shape[y][0];
+                    shape[y][0] = oldShapeY[j];    
+                }
+                    
+                
+                
+                printf("shape before: %d", shape[y][0]);
+
+                while (playfield[shape[y][0]+1][shape[y][1]] != 254 && shape[y][0] < 21)
+                {
+                    shape[y][0]++; 
+                } 
+
+                printf("Shape: %d\n", shape[y][0]);
+                
+                if (highestY >= shape[y][0])
+                {
+                     highestY = shape[y][0];
+                     highestBlock = j;
+                     distance = highestY - oldShapeY[j];
+                }   
+        
+                printf("highestY : %d\n", highestY);
+                printf("highestBlock :%d\n", highestBlock);
+                printf("distance: %d\n", distance);
+                    
+
+    
+            }
+            
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+                shape[i][0] = oldShapeY[i] +  distance; 
+                printf("Shape[%d][0]: %d", i, shape[i][0]);
+        }
+    }
+
+        
+
+    
+
+        
+    
+    printf("a = %d b = %d", a, b);
+
+            if (a == 1 || b == 1)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    shape[i][0] = oldShapeY[i];
+                    shape[i][1] = oldShapeX[i];
+                    
+                }
+                return;
+            }
 
             for (int i = 0; i < 4; i++)
             {
@@ -205,6 +337,7 @@ void movement (unsigned char playfield[23][12], int shape[4][2])
 
             for (int i = 0; i < 4; i++)
                 playfield[shape[i][0]][shape[i][1]] = 254;
+
 }
 
 int blockPlacement(unsigned char playfield[23][12], int shape[4][2])
@@ -236,6 +369,9 @@ int blockPlacement(unsigned char playfield[23][12], int shape[4][2])
         //printf("x = %d\ty = %d ", shape[i][1], shape[i][0]);
         //printf("%d ", x);
     }
+
+    for (int i = 0; i< 4; i++)
+        printf("%d ", numbersOfShapesInContact[i]);
     // printf("Test 4\n");
     printf("Exit = %d\n", exit);
 
@@ -283,6 +419,7 @@ int blocksCleared(unsigned char playfield[23][12], int shape[4][2])
     int ClearedBlocks[4] = {-1, -1, -1, -1}; 
     for (int i = 0; i < 4; i++)
     {
+        
         int blocksInY=0;
         for (int j = 1; j < 11; j++)
         {
@@ -290,28 +427,39 @@ int blocksCleared(unsigned char playfield[23][12], int shape[4][2])
                 blocksInY++; 
         }
         if (blocksInY == 10)
+        {
             ClearedBlocks[i] = shape[i][0];
+        }                       
+    }
 
-        for (int j = 1; j <= 10; j++)
+    for (int g = 0; g < 3; g++)
+    {
+        for (int j = g + 1; j < 4; j++)
         {
-            if (ClearedBlocks[i] != -1)
-            {
-                playfield[ClearedBlocks[i]][j] = ' ';
-            }
+            if (ClearedBlocks[g] == ClearedBlocks[j])
+                ClearedBlocks[j] = -1; 
         }
-
-        for (int j = ClearedBlocks[i]; j > 0; j--)
-        {
-            if (j != -1)
-                for (int g = 1; g < 11; g++)
-                    playfield[j+1][g] = playfield[j][g];
-        }
-
-        printf("Blocks in Y: %d", blocksInY);
     }
     
-    for (int i = 0; i < 4; i++)
+    for (int y = 0; y < 4; y++)
     {
-        printf("Cleared Blocks: %d\t", ClearedBlocks[i]);
-    }
+        for (int x = ClearedBlocks[y]; x > 0; x--)
+        {
+            for (int z = 1; z < 11; z++)
+            {
+                if (ClearedBlocks[y] != -1)
+                {
+                    playfield[x][z] = playfield[x-1][z];
+                }
+            }
+        }
+    }        
+        for (int x = 0; x < 4; x++)
+                    printf("%d", ClearedBlocks[x]);
+
+
 }
+        
+        
+        
+
