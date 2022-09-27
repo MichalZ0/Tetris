@@ -4,10 +4,18 @@
 #include <time.h>
 #include <math.h>
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 unsigned char playfield[23][12];
 
 void border (unsigned char playfield[23][12]);
-void print (unsigned char playfield[23][12]);
+void print (unsigned char playfield[23][12], int shape[4][2]);
 void fill (unsigned char playfield[23][12]);
 void createBlock (unsigned char playfield[23][12], int shape[4][2]);
 void movement (unsigned char playfield[23][12], int shape[4][2]);
@@ -52,7 +60,7 @@ int main()
     int number = rand()%7;
 
 
-        copyArray(playfield, lineShape, shape);
+        copyArray(playfield, randomShape[number], shape);
         createBlock(playfield, shape);
 
         while (1)
@@ -62,13 +70,13 @@ int main()
            {
                 printf("TUTAJ 1\n");
                 movement(playfield, shape);
-                print(playfield);
+                print(playfield, shape);
            }
            else
             {
                 blocksCleared(playfield, shape); 
                 number = rand()%7;
-                copyArray(playfield, lineShape, shape);
+                copyArray(playfield, randomShape[number], shape);
                 createBlock(playfield, shape);
             }
         }
@@ -94,14 +102,20 @@ void border (unsigned char playfield[23][12])
     playfield[22][11] = 217;
 }
 
-void print(unsigned char playfield[23][12])
+void print(unsigned char playfield[23][12], int shape[4][2])
 {
     for (int i = 0; i < 23; i++)
     {
             for (int j = 0; j < 12; j++)
             {
-                 if (i < 22)
-                    printf("%c ", playfield[i][j]);
+                 if (i < 22 )
+                 {
+                    if (i == 33 && j == 33)
+                        printf(ANSI_COLOR_RED "%c ", playfield[i][j], ANSI_COLOR_RESET);   
+                    else
+                        printf("%c ", playfield[i][j]);
+                 }
+
                  if (i == 22 && j < 11)
                  {
                     printf("%c", playfield[i][j]);
@@ -133,7 +147,7 @@ int keyhit(char rejectKey)
     time_t start = time(NULL);
     char key;
     while (time(NULL) - start < 1)
-    {
+    {                                                                           
        if (key = kbhit() && key != rejectKey)
             return getch();
     }
@@ -252,70 +266,111 @@ void movement (unsigned char playfield[23][12], int shape[4][2])
     
     if (key == ' ')
     {
-        int lowestY[4]= {-1, -1, -1, -1}, highestY, distance, highestBlock = 3; 
+         int lowestY[4]= {-1, -1, -1, -1}, highestY= -1, distance[4]={25,25,25,25}, finalDistance, YUsed[4] = {0,1,2,3};  
+
+
         for (int j = 3; j >= 0; j--)
         {
-            oldShapeX[j] = shape[j][1];
-            oldShapeY[j] = shape[j][0];
-            
             int y = blocksInContact(shape, j, lowestY); 
-            
-            
+            YUsed[y] = -1; 
 
+
+            for (int i = 3; i >=0; i--)
+                printf("lowestY: %d\n", lowestY[i]);
+
+            printf("block Y value: %d\n", y ); 
+            
             if (y != -1)
             {
+                int BlockesChecked = 0; 
                 
-                
-                if (j == 3)
-                {
-                    
-                    while (playfield[shape[y][0]+1][shape[y][1]] != 254 && shape[y][0] < 21)
-                        shape[y][0]++; 
-                    highestY = shape[y][0];
-                    shape[y][0] = oldShapeY[j];    
-                }
-                    
-                
-                
-                printf("shape before: %d", shape[y][0]);
+                oldShapeX[y] = shape[y][1];
+                oldShapeY[y] = shape[y][0];
 
-                while (playfield[shape[y][0]+1][shape[y][1]] != 254 && shape[y][0] < 21)
+
+                printf("Shape[y][0] before increment: %d\n", shape[y][0]); 
+                printf("Old Shape Y value: %d\n", oldShapeY[j]); 
+                while (playfield[shape[y][0]+1][shape[y][1]] != 254 && shape[y][0] < 21 )
                 {
-                    shape[y][0]++; 
+                    printf("Shape[y][0] in loop: %d\n", shape[y][0]); 
+                    shape[y][0]++;    
+                }     
+                
+                  
+                printf("Shape[y][0] value after increment: %d\n", shape[y][0]);
+                distance[j] = shape[y][0] - oldShapeY[y];
+                shape[y][0] = oldShapeY[y];
+
+                for (int g = 3; g >= 0; g--)
+                {
+                    //printf("shape[y][0] = %d\ndistance = %d\n shape with distance = %d", shape[y][0], distance[j], shape[y][0]+distance[j]);
+                    if (playfield[shape[g][0]+distance[j]][shape[g][1]] != 254 && shape[g][0]+distance[j] < 22)
+                     {
+                        printf("X shape with distance: %d\tY shape with distance: %d\n", shape[g][1], shape[g][0] + distance[j]);  
+                        BlockesChecked++;
+                        //printf("Blockes checked: %d\n", BlockesChecked); 
+                     } 
                 } 
 
-                printf("Shape: %d\n", shape[y][0]);
+                printf("Blockes Checked: %d\n", BlockesChecked); 
+                printf("Distance: %d\n\n", distance[j]); 
+
+                if (BlockesChecked < 4)
+                        distance[j] = 100; 
+
+                if (BlockesChecked == 4)
+                    finalDistance = distance[j]; 
                 
-                if (highestY >= shape[y][0])
-                {
-                     highestY = shape[y][0];
-                     highestBlock = j;
-                     distance = highestY - oldShapeY[j];
-                }   
-        
-                printf("highestY : %d\n", highestY);
-                printf("highestBlock :%d\n", highestBlock);
-                printf("distance: %d\n", distance);
-                    
 
-    
-            }
             
+            }
+                                   
+         }
+         printf("Final Distance: %d", finalDistance); 
+
+         for (int i = 3; i >= 0; i--)
+         { 
+            printf("DIstance[%d]=%d\n", i, distance[i]); 
+         }   
+
+         for (int i = 3; i >= 0; i--)
+         {
+            if (finalDistance > distance[i])
+            {
+                
+                printf("Final distance in loop: %d\tdistance in loop\n", finalDistance, distance[i]); 
+                finalDistance = distance[i];
+                  
+
+            }   
+             printf("Loop test\n"); 
+         }
+
+         printf("Final distance after loop: %d\n", finalDistance); 
+
+         for (int i = 3; i >=0; i--)
+         {
+            if (YUsed[i] != -1)
+            {
+                oldShapeX[YUsed[i]] = shape[YUsed[i]][1]; 
+                oldShapeY[YUsed[i]] = shape[YUsed[i]][0]; 
+            }
+         }
+         
+         for (int i = 3; i >= 0; i--)
+         {
+            shape[i][0]+= finalDistance;
+         }
+
+         for (int i = 3; i >= 0; i--)
+        {
+            printf("OldShapeX : %d\tOldShapeY : %d\n", oldShapeX[i], oldShapeY[i]);
+            printf("Shape X: %d\tShape Y: %d\n", shape[i][1], shape[i][0]); 
         }
 
-        for (int i = 0; i < 4; i++)
-        {
-                shape[i][0] = oldShapeY[i] +  distance; 
-                printf("Shape[%d][0]: %d", i, shape[i][0]);
-        }
+
     }
 
-        
-
-    
-
-        
-    
     printf("a = %d b = %d", a, b);
 
             if (a == 1 || b == 1)
@@ -346,34 +401,24 @@ int blockPlacement(unsigned char playfield[23][12], int shape[4][2])
     for (int i = 3; i >= 0; i--)
     {   
         int x = blocksInContact(shape, i, numbersOfShapesInContact);
-        printf("i = %d\t", i);
-        printf("x = %d\n", x);
-            printf("Test warunkow\n");
+        printf("Number of block: %d\n", x); 
             
             if (x != -1)
             {
                     if ((shape[x][0])+1 == 22)
                     {
                         exit--;
-                        printf("Warunek 1\n");
+                        
                     }
 
                 if (playfield[shape[x][0]+1][shape[x][1]] == 254)
                 {
                     exit--;
-                    printf("Warunek 2\n");
                 }
             }
             
         
-        //printf("x = %d\ty = %d ", shape[i][1], shape[i][0]);
-        //printf("%d ", x);
     }
-
-    for (int i = 0; i< 4; i++)
-        printf("%d ", numbersOfShapesInContact[i]);
-    // printf("Test 4\n");
-    printf("Exit = %d\n", exit);
 
     if (exit == 1)
         return 1;
@@ -460,6 +505,3 @@ int blocksCleared(unsigned char playfield[23][12], int shape[4][2])
 
 }
         
-        
-        
-
