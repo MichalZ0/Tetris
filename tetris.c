@@ -4,6 +4,7 @@
 #include <time.h>
 #include <math.h>
 #include <wchar.h>
+#include <sys/time.h>
 
 
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -21,7 +22,7 @@ void print (unsigned char playfield[23][12], char *ColorShape[25], int number);
 void fill (unsigned char playfield[23][12]);
 void createBlock (unsigned char playfield[23][12], int shape[4][2]);
 void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[4][2], int p, int z);
-int keyhit(char rejectKey);
+int keyhit(char rejectKey, time_t *current);
 void gameplay(unsigned char playfield[23][12], int shape[4][2]);
 int blockPlacement(unsigned char playfield[23][12], int shape[4][2]);
 int copyArray(unsigned char playfield[23][12], int copiedShape[4][2], int shape[4][2]);
@@ -31,11 +32,16 @@ void BlocksClearedFull(unsigned char playfield[23][12]);
 
 int ShapesToColor[100][3], q = 0, NumberOfColor[50];
 char* ColorShape[7] = {ANSI_COLOR_BLUE, ANSI_COLOR_RED, ANSI_COLOR_CYAN, ANSI_COLOR_YELLOW, ANSI_COLOR_GREEN, ANSI_COLOR_MAGENTA, ANSI_COLOR_RED};
+static int done = 0;
 
+struct timeval stop, start, now;
+unsigned curr = 0, end = 600000;
 
 int main()
 {
 
+     printf("I'm here!\n" );
+     
       HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE)
     {
@@ -92,7 +98,6 @@ int main()
         tShape[4][2] = {{0,2}, {1,1}, {1,2}, {1,3}},
         zInvShape[4][2] = {{0,2}, {0,3}, {1,1}, {1,2}},
         lInvShape[4][2] = {{0,3}, {1,1}, {1,2}, {1,3}};
-    static int done = 0;
 
     int shape[4][2];
 
@@ -133,20 +138,28 @@ int main()
 
         while (1)
         {
+           
            printf("Przechodze tu");
            if (blockPlacement(playfield, shape))
            {
+                
                 printf("TUTAJ 1\n");
                 movement(playfield, shape, ShapesToColor, p, z);
-                for (int i = 0; i < 50; i++)
-                {
-                    printf("Shapes to Color X: %d\tShapes to Color Y: %d\t Shapes to Color Z = %d\n", ShapesToColor[i][1], ShapesToColor[i][0], ShapesToColor[i][2]);
-                }
-                print(playfield, ColorShape, number);
+                system("cls"); 
+                
+                // for (int i = 0; i < 100; i++)
+                // {
+                //     printf("Shapes to Color X: %d\tShapes to Color Y: %d\t Shapes to Color Z = %d\n", ShapesToColor[i][1], ShapesToColor[i][0], ShapesToColor[i][2]);
+                // }
+
+                    print(playfield, ColorShape, number); 
+                printf("P: %d", p); 
            }
            else
             {
                 p = blocksCleared(playfield, shape, p);
+                z = p + 4;
+                
                 number = rand()%7;
 
 
@@ -160,9 +173,10 @@ int main()
                 copyArray(playfield, randomShape[number], shape);
                 createBlock(playfield, shape);
                 //p = p + 4;
-                z = p + 4;
+                
 
             }
+            
         }
 }
 
@@ -245,14 +259,28 @@ void createBlock (unsigned char playfield[23][12], int shape[4][2])
         playfield[shape[i][0]][shape[i][1]] = 254;
 }
 
-int keyhit(char rejectKey)
-{
-    time_t start = time(NULL);
+int keyhit(char rejectKey, time_t *current)
+{ 
+    // if (curr > end)
+    // {
+    //     gettimeofday(&start, NULL);
+    //     gettimeofday(&now, NULL); 
+
+    //     curr = (now.tv_sec - start.tv_sec) * 1000000 + now.tv_usec - start.tv_usec; 
+
+    // }    
+   
     char key;
-    while (time(NULL) - start < 1)
-    {
-       if (key = kbhit() && key != rejectKey)
+
+    while (curr < end)
+    { 
+      
+       if (key = kbhit())
+       {
             return getch();
+       }    
+       gettimeofday(&now, NULL);
+       curr = (now.tv_sec - start.tv_sec) * 1000000 + now.tv_usec - start.tv_usec;
     }
     return -1;
 
@@ -261,7 +289,24 @@ int keyhit(char rejectKey)
 void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[4][2], int p, int z)
 {
     static char rejectKey = 'o';
-    char key = keyhit(rejectKey);
+    static int blockRejected = 0; 
+    int CheckThis = 0; 
+    
+    time_t current;
+
+    if (curr > end)
+    {
+         gettimeofday(&start, NULL);
+        gettimeofday(&now, NULL); 
+        curr = 0;
+
+    }   
+   
+    char key = keyhit(rejectKey, &current);
+
+    printf("Current: %lf\n", current); 
+    printf("Key: %c", key);
+
     int GoToY;
 
 
@@ -269,40 +314,22 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
 
     int oldShapeY[4], oldShapeX[4], leftMost[4] = {-1, -1, -1, -1}, rightMost[4] = {-1, -1, -1, -1}, leftX = shape[0][1], rightX = shape[0][1];
 
-    for (int i = 1; i < 4; i++)
+    if (key == 'r')
     {
-          if (rightX < shape[i][1])
-            rightX = shape[i][1];
-
-            if (leftX > shape[i][1])
-                leftX = shape[i][1];
+        
+        system("cls"); 
+        done = 0;
+        main(); 
     }
 
-   for (int i = 0; i < 4; i++)
-   {
-        if (rightX == shape[i][1])
-            rightMost[i] = shape[i][0];
-
-        if (leftX == shape[i][1])
-            leftMost[i] = shape[i][0];
-   }
-
-    for (int i = 0; i< 4; i++)
-    {
-        printf("LeftX : %d, RightX : %d\n", leftX, rightX);
-        printf("Left Most: %d\tRight Most: %d\n\n", leftMost[i], rightMost[i]);
-    }
-
-
+    
     if (key == -1 || key == 'o')
     {
         for (int i = 3; i >= 0; i--)
         {
                 oldShapeY[i] = shape[i][0];
                 oldShapeX[i] = shape[i][1];
-
-
-
+             
                 shape[i][0]++;
         }
     }
@@ -313,13 +340,12 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
 
             oldShapeX[i] = shape[i][1];
             oldShapeY[i] = shape[i][0];
+            
+            if (playfield[shape[i][0]][shape[i][1]-1] == 179 )
+                CheckThis = 1;
 
-            if (playfield[leftMost[i]][leftX-1] == 254 || playfield[leftMost[i]][leftX-1] == 179)
-            {
-                rejectKey = 'a';
-                a = 1;
-            }
-
+            //printf("Shape[i][1] przed petla: %d\n", shape[i][1]); 
+            
 
             shape[i][1]--;
 
@@ -333,17 +359,16 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
 
             oldShapeX[i] = shape[i][1];
             oldShapeY[i] = shape[i][0];
+            
+            if (playfield[shape[i][0]][shape[i][1]+1] == 179)
+                CheckThis = 1;
 
-            if (playfield[rightMost[i]][rightX+1] == 254 || playfield[rightMost[i]][rightX+1] == 179)
-             {
-               rejectKey = 'e';
-               b = 1;
-             }
-
+           
 
             shape[i][1]++;
 
         }
+
     }
 
     if (key == ',')
@@ -360,8 +385,12 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
             oldShapeX[i] = shape[i][1];
             oldShapeY[i] = shape[i][0];
 
+
             shape[i][0] = ynew;
             shape[i][1] = xnew;
+
+            if (playfield[shape[i][0]][shape[i][1]] == 179 )
+                CheckThis = 1; 
 
         }
     }
@@ -371,6 +400,8 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
     {
          int lowestY[4]= {-1, -1, -1, -1}, highestY= -1, distance[4]={25,25,25,25}, finalDistance, YUsed[4] = {0,1,2,3};
 
+        int ShapeValues[4][2]; 
+        copyArray(playfield, shape, ShapeValues); 
 
         for (int j = 3; j >= 0; j--)
         {
@@ -385,7 +416,10 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
 
             if (y != -1)
             {
+                int GoToWhileLoop = 0; 
                 int BlockesChecked = 0;
+                    
+
 
                 oldShapeX[y] = shape[y][1];
                 oldShapeY[y] = shape[y][0];
@@ -393,7 +427,9 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
 
                 printf("Shape[y][0] before increment: %d\n", shape[y][0]);
                 printf("Old Shape Y value: %d\n", oldShapeY[j]);
-                while (playfield[shape[y][0]+1][shape[y][1]] != 254 && shape[y][0] < 21 )
+                    
+                    
+                while ((playfield[shape[y][0]+1][shape[y][1]] != 254 || GoToWhileLoop > 0) && shape[y][0] < 21)
                 {
                     printf("Shape[y][0] in loop: %d\n", shape[y][0]);
                     shape[y][0]++;
@@ -403,11 +439,22 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
                 printf("Shape[y][0] value after increment: %d\n", shape[y][0]);
                 distance[j] = shape[y][0] - oldShapeY[y];
                 shape[y][0] = oldShapeY[y];
+                GoToWhileLoop = 0; 
 
                 for (int g = 3; g >= 0; g--)
                 {
+                     for (int h = 0; h < 4; h++)
+                     {
+                        
+                        if (shape[g][0]+distance[j] == shape[h][0])
+                        {
+                            
+                            GoToWhileLoop++; 
+                            
+                        }    
+                     }                                                 
                     //printf("shape[y][0] = %d\ndistance = %d\n shape with distance = %d", shape[y][0], distance[j], shape[y][0]+distance[j]);
-                    if (playfield[shape[g][0]+distance[j]][shape[g][1]] != 254 && shape[g][0]+distance[j] < 22)
+                    if ((playfield[shape[g][0]+distance[j]][shape[g][1]] != 254 || GoToWhileLoop > 0) && shape[g][0]+distance[j] < 22)
                      {
                         printf("X shape with distance: %d\tY shape with distance: %d\n", shape[g][1], shape[g][0] + distance[j]);
                         BlockesChecked++;
@@ -474,23 +521,45 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
 
     }
 
-    printf("a = %d b = %d", a, b);
+        //printf("Sprawdzamy czy obiekt sie naklada z innym\n"); 
+        for (int i = 0; i < 4; i++)
+        {  
 
-            if (a == 1 || b == 1)
-            {
-                for (int i = 0; i < 4; i++)
+            int ShapesNotColliding = 0;
+            if (playfield[shape[i][0]][shape[i][1]] == 254)
+            { 
+                for (int j = 0; j < 4; j++)
                 {
-                    shape[i][0] = oldShapeY[i];
-                    shape[i][1] = oldShapeX[i];
-
+                    //printf("shape[%d][1] = %d, oldShapeX = %d\n", i, shape[i][1], oldShapeX[j]); 
+                    if (shape[i][1] != oldShapeX[j])
+                    {
+                        printf("True\n"); 
+                        ShapesNotColliding++; 
+                    }
                 }
-                return;
+
+                if (ShapesNotColliding == 4)
+                    CheckThis = 1; 
             }
+            
+        }
+
+        for (int i = 0; i < 4 && CheckThis == 1; i++)
+        {
+            shape[i][0] = oldShapeY[i]; 
+            shape[i][1] = oldShapeX[i]; 
+            gettimeofday(&now, NULL); 
+            curr = (now.tv_sec - start.tv_sec) * 1000000 + now.tv_usec - start.tv_usec;
+            if (i == 3)
+                return; 
+        }
+
 
             for (int i = 0; i < 4; i++)
             {
                 playfield[oldShapeY[i]][oldShapeX[i]] = ' ';
             }
+            
 
 
             for (int i = 0; i < 4; i++)
@@ -506,6 +575,9 @@ void movement (unsigned char playfield[23][12], int shape[4][2], int colorShape[
 
             }
 
+    gettimeofday(&now, NULL); 
+
+        //blockRejected = 0; 
 
 }
 
@@ -646,8 +718,4 @@ int blocksCleared(unsigned char playfield[23][12], int shape[4][2], int p)
             return p;
         return p+4;
 }
-
-
-
-
 
